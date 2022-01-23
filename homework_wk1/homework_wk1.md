@@ -1,6 +1,13 @@
 # Week 1 Homework
 
-Wk1 homework code snippets :
+[Week 1 homework](https://github.com/DataTalksClub/data-engineering-zoomcamp/blob/main/week_1_basics_n_setup/homework.md) code snippets.
+
+For the SQL queries, I have setup 2 tables :
+
+- `yellow_taxi_trips` which contains the taxi trips records. The data in this table is ingested from [https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv](https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv)
+- `zone_lookup` which contains the location id and details of each zone. The data in this table is ingested from [https://s3.amazonaws.com/nyc-tlc/misc/taxi+\_zone_lookup.csv](https://s3.amazonaws.com/nyc-tlc/misc/taxi+_zone_lookup.csv)
+
+The queries were run locally in pgAdmin running from docker-compose.yaml. You can see the additional materials in the folder `wk1_homework`. The data was ingested using the [`ingest_data.py`](https://github.com/DataTalksClub/data-engineering-zoomcamp/blob/main/week_1_basics_n_setup/2_docker_sql/ingest_data.py) script that was provided in the course repo with a bit of minor modification (see `homework_wk1` folder) to allow for ingestion of the zones data, which does not have the `tpep_*` columns.
 
 ### Q1 - Google cloud version
 
@@ -110,6 +117,12 @@ SQL query to get the number of trips in Jan 15 :
     FROM yellow_taxi_trips
     WHERE CAST(tpep_pickup_datetime AS DATE) = '2021-01-15'
 
+Which outputs
+
+| num_trips |
+| --------- |
+| 53024     |
+
 ### Q4 - Date with the largest tip
 
 SQL query to get the largest tip per day
@@ -120,11 +133,17 @@ SQL query to get the largest tip per day
     ORDER BY max_tip DESC
     LIMIT 1
 
+Which outputs
+
+| pickup_date | max_tip |
+| ----------- | ------- |
+| 2021-01-20  | 1140.44 |
+
 ### Q5 - Most popular destination from Central Park
 
 SQL query to get the most popular destination from Central Park
 
-    SELECT "Zone", num_trips from (
+    SELECT "Zone" as destination, num_trips from (
       SELECT "DOLocationID", COUNT(*) as num_trips
       FROM yellow_taxi_trips
       WHERE CAST(tpep_pickup_datetime AS DATE) = '2021-01-14'
@@ -139,25 +158,37 @@ SQL query to get the most popular destination from Central Park
     ORDER BY num_trips DESC
     LIMIT 1
 
+Which outputs
+
+| destination           | num_trips |
+| --------------------- | --------- |
+| Upper East Side South | 97        |
+
 ### Q6 - Trip pair with the highest average trip amount
 
 SQL query to get the trip pair with the highest average amount
 
     SELECT
-      do_location_tbl."Zone" as do_location,
       pu_location_tbl."Zone" as pu_location,
+      do_location_tbl."Zone" as do_location,
       avg_amount
     FROM (
       SELECT
-        "DOLocationID",
         "PULocationID",
+        "DOLocationID",
         AVG(total_amount) as avg_amount
       FROM yellow_taxi_trips
       GROUP BY "DOLocationID", "PULocationID"
       ) as trips_fare
-    INNER JOIN zone_lookup AS do_location_tbl
-    ON trips_fare."DOLocationID" = do_location_tbl."LocationID"
     INNER JOIN zone_lookup AS pu_location_tbl
     ON trips_fare."PULocationID" = pu_location_tbl."LocationID"
+    INNER JOIN zone_lookup AS do_location_tbl
+    ON trips_fare."DOLocationID" = do_location_tbl."LocationID"
     ORDER BY avg_amount DESC
     LIMIT 1
+
+which outputs
+
+| pu_location   | do_location | avg_amount |
+| ------------- | ----------- | ---------- |
+| Alphabet City | null        | 2292.4     |
